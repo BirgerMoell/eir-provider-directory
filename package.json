@@ -1,0 +1,25 @@
+{
+  "name": "eir-provider-directory",
+  "version": "1.0.0",
+  "description": "Open source healthcare provider directory",
+  "main": "index.js",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "keywords": ["healthcare", "providers", "directory", "eir", "open-source"],
+  "author": "EIR Space",
+  "license": "MIT",
+  "dependencies": {
+    "next": "^14.2.5",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "mapbox-gl": "^3.1.2",
+    "@types/node": "^20.14.10",
+    "typescript": "^5.5.3",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0"
+  }
+}
