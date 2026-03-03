@@ -26,6 +26,7 @@ export default async function handler(req, res) {
       limit = 1000,
       offset = 0
     } = query
+    const summaryMode = query.summary !== 'false'
 
     // Filter by type
     if (type && type !== 'all') {
@@ -80,7 +81,11 @@ export default async function handler(req, res) {
     // Pagination
     const startIndex = parseInt(offset)
     const endIndex = startIndex + parseInt(limit)
-    const paginatedProviders = providers.slice(startIndex, endIndex)
+    let paginatedProviders = providers.slice(startIndex, endIndex)
+
+    if (summaryMode) {
+      paginatedProviders = paginatedProviders.map(toSummaryProvider)
+    }
 
     // Response
     res.status(200).json({
@@ -122,4 +127,27 @@ function calculateDistance(lat1, lng1, lat2, lng2) {
 
 function toRadians(degrees) {
   return degrees * (Math.PI / 180)
+}
+
+function toSummaryProvider(provider) {
+  const services = provider.services || {}
+  return {
+    id: provider.id,
+    name: provider.name,
+    type: provider.type,
+    specialty: Array.isArray(provider.specialty) ? provider.specialty : [],
+    contact: provider.contact || {},
+    location: provider.location || {},
+    services: {
+      self_referral: Boolean(services.self_referral),
+      self_referral_verified: Boolean(services.self_referral_verified),
+      self_referral_verification_status:
+        services.self_referral_verification_status || 'unchecked',
+      video_consultation: Boolean(services.video_consultation),
+      mvk_services: Boolean(services.mvk_services),
+      has_listing: Boolean(services.has_listing),
+      e_services: Array.isArray(services.e_services) ? services.e_services.slice(0, 12) : []
+    },
+    metadata: provider.metadata || {}
+  }
 }

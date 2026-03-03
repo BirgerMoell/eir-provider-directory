@@ -45,6 +45,7 @@ export default function Home() {
   })
   const [careFocusFilters, setCareFocusFilters] = useState([])
   const [loading, setLoading] = useState(true)
+  const [loadingError, setLoadingError] = useState('')
   const [viewMode, setViewMode] = useState('map')
   const [selectedProvider, setSelectedProvider] = useState(null)
   const [userLocation, setUserLocation] = useState(null)
@@ -71,28 +72,81 @@ export default function Home() {
 
   // Load provider data on mount
   useEffect(() => {
+    let cancelled = false
+
+    const fetchProviderChunk = async (offset, limit) => {
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 20000)
+      try {
+        const response = await fetch(
+          `/api/providers?limit=${limit}&offset=${offset}&summary=true`,
+          { signal: controller.signal }
+        )
+        if (!response.ok) {
+          throw new Error(`Provider API returned ${response.status}`)
+        }
+        return response.json()
+      } finally {
+        clearTimeout(timeoutId)
+      }
+    }
+
+    const loadRemainingProviders = async (startOffset, totalProviders) => {
+      const chunkSize = 5000
+      for (let offset = startOffset; offset < totalProviders; offset += chunkSize) {
+        if (cancelled) return
+        try {
+          const data = await fetchProviderChunk(offset, chunkSize)
+          const chunk = data.providers || []
+          if (!chunk.length) break
+          if (cancelled) return
+          setProviders(prev => prev.concat(chunk))
+        } catch (error) {
+          console.error('Error loading remaining providers:', error)
+          return
+        }
+      }
+    }
+
     async function loadProviders() {
+      let initialLoaded = false
       try {
         setLoading(true)
-        // Default to full national dataset for comprehensive directory coverage.
-        const response = await fetch('/api/providers?limit=20000')
-        const data = await response.json()
+        setLoadingError('')
+        const data = await fetchProviderChunk(0, 5000)
         const loadedProviders = data.providers || []
+        if (cancelled) return
+
         setProviders(loadedProviders)
         setFilteredProviders(loadedProviders)
         setStatistics(calculateStatistics(loadedProviders))
+
+        const totalProviders = data.metadata?.total || loadedProviders.length
         setDatasetMetadata({
-          total_providers: data.metadata?.total || loadedProviders.length,
+          total_providers: totalProviders,
           generated: new Date().toISOString()
         })
-      } catch (error) {
-        console.error('Error loading providers:', error)
-      } finally {
+        initialLoaded = true
         setLoading(false)
+
+        if (loadedProviders.length < totalProviders) {
+          void loadRemainingProviders(loadedProviders.length, totalProviders)
+        }
+      } catch (error) {
+        if (cancelled) return
+        console.error('Error loading providers:', error)
+        setLoadingError('Could not load provider data. Please retry.')
+      } finally {
+        if (!cancelled && !initialLoaded) {
+          setLoading(false)
+        }
       }
     }
     
     loadProviders()
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   // Filter providers when search or filters change.
@@ -117,6 +171,10 @@ export default function Home() {
     setFilteredProviders(withAddress)
     setDigitalOnlyProviders(digitalOnly)
   }, [providers, searchQuery, selectedType, serviceFilters, careFocusFilters, userLocation, nearbyOnly, nearbyRadiusKm])
+
+  useEffect(() => {
+    setStatistics(calculateStatistics(providers))
+  }, [providers])
 
   // Clear selected provider if it disappears from filtered result set.
   useEffect(() => {
@@ -292,6 +350,23 @@ export default function Home() {
         <div className="loading-spinner">
           <h2>🏥 Loading Swedish Healthcare Providers...</h2>
           <div className="spinner"></div>
+        </div>
+      </div>
+    )
+  }
+
+  if (!loading && loadingError) {
+    return (
+      <div className="loading-container">
+        <Head>
+          <title>EIR Provider Directory - Error</title>
+        </Head>
+        <div className="loading-spinner">
+          <h2>Could not load provider data</h2>
+          <p>{loadingError}</p>
+          <button className="my-location-button" onClick={() => window.location.reload()}>
+            Retry
+          </button>
         </div>
       </div>
     )
