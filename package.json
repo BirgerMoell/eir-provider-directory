@@ -2,24 +2,46 @@
   "name": "eir-provider-directory",
   "version": "1.0.0",
   "description": "Open source healthcare provider directory",
-  "main": "index.js",
+  "type": "module",
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "next lint"
+    "dev": "vinext dev",
+    "build": "vinext build",
+    "start": "vinext start",
+    "lint": "vinext lint",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "verify:self-referral": "node scripts/verify-self-referral-1177.js",
+    "enrich:1177": "node scripts/enrich-providers-1177.js",
+    "dev:vinext": "vite dev --port 3001",
+    "build:vinext": "vite build",
+    "deploy:prep-assets": "rm -rf dist/deploy-assets && mkdir -p dist/deploy-assets && rsync -a --exclude 'providers-sweden-verified.json' dist/client/ dist/deploy-assets/",
+    "deploy:cloudflare": "npm run build && npm run deploy:prep-assets && wrangler deploy --config wrangler.jsonc"
   },
-  "keywords": ["healthcare", "providers", "directory", "eir", "open-source"],
+  "keywords": [
+    "healthcare",
+    "providers",
+    "directory",
+    "eir",
+    "open-source"
+  ],
   "author": "EIR Space",
   "license": "MIT",
   "dependencies": {
-    "next": "^14.2.5",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "mapbox-gl": "^3.1.2",
     "@types/node": "^20.14.10",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "mapbox-gl": "^3.1.2",
+    "maplibre-gl": "^5.19.0",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "react-window": "^2.2.7",
     "typescript": "^5.5.3",
-    "@types/react": "^18.3.3",
-    "@types/react-dom": "^18.3.0"
+    "vinext": "^0.0.18"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "^1.25.6",
+    "vite": "^7.3.1",
+    "vitest": "^4.0.18",
+    "wrangler": "^4.69.0"
   }
 }

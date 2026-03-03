@@ -1,7 +1,8 @@
-import fs from 'fs'
-import path from 'path'
+import { hasVerifiedSelfReferral } from '../../lib/self-referral'
+import { findCareFocusesInText, providerHasCareFocus } from '../../lib/care-focus'
+import { loadProviderDataset } from '../../lib/provider-data'
 
-export default function handler(req, res) {
+export default async function handler(req, res) {
   const { method, query } = req
   
   if (method !== 'GET') {
@@ -15,11 +16,11 @@ export default function handler(req, res) {
   }
 
   try {
-    const filePath = path.join(process.cwd(), 'public/data/providers-sweden.json')
-    const data = JSON.parse(fs.readFileSync(filePath, 'utf8'))
+    const data = await loadProviderDataset(req, { useSample: false })
     let providers = data.providers
 
     const searchTerm = q.toLowerCase().trim()
+    const queryCareFocuses = findCareFocusesInText(searchTerm)
     
     // Search across multiple fields with scoring
     const searchResults = providers.map(provider => {
@@ -36,13 +37,14 @@ export default function handler(req, res) {
       }
 
       // Address match
-      if (provider.location.address && provider.location.address.toLowerCase().includes(searchTerm)) {
+      if (provider.location?.address && provider.location.address.toLowerCase().includes(searchTerm)) {
         score += 30
         matchedFields.push('address')
       }
 
       // Specialty match
-      const specialtyMatch = provider.specialty.find(s => s.toLowerCase().includes(searchTerm))
+      const specialties = Array.isArray(provider.specialty) ? provider.specialty : []
+      const specialtyMatch = specialties.find(s => s.toLowerCase().includes(searchTerm))
       if (specialtyMatch) {
         score += 40
         matchedFields.push('specialty')
@@ -62,14 +64,20 @@ export default function handler(req, res) {
       }
 
       // Phone number match
-      if (provider.contact.phone && provider.contact.phone.replace(/\D/g, '').includes(searchTerm.replace(/\D/g, ''))) {
+      if (provider.contact?.phone && provider.contact.phone.replace(/\D/g, '').includes(searchTerm.replace(/\D/g, ''))) {
         score += 10
         matchedFields.push('phone')
       }
 
-      // Boost for self-referral providers
-      if (provider.services.self_referral && score > 0) {
+      // Boost for verified self-referral providers
+      if (hasVerifiedSelfReferral(provider) && score > 0) {
         score += 10
+      }
+
+      // Boost when the query maps to known care focus categories.
+      if (queryCareFocuses.length > 0 && providerHasCareFocus(provider, queryCareFocuses)) {
+        score += 25
+        matchedFields.push('care_focus')
       }
 
       return {
@@ -107,6 +115,7 @@ export default function handler(req, res) {
 
 function generateSearchSuggestions(searchTerm, providers) {
   const suggestions = new Set()
+  const queryCareFocuses = findCareFocusesInText(searchTerm)
   
   // Find similar names
   providers.forEach(provider => {
@@ -118,7 +127,8 @@ function generateSearchSuggestions(searchTerm, providers) {
     }
     
     // Suggest specialties
-    provider.specialty.forEach(specialty => {
+    const specialties = Array.isArray(provider.specialty) ? provider.specialty : []
+    specialties.forEach(specialty => {
       if (specialty.toLowerCase().includes(searchTerm)) {
         suggestions.add(specialty)
       }
@@ -137,6 +147,15 @@ function generateSearchSuggestions(searchTerm, providers) {
       suggestions.add(term)
     }
   })
+
+  if (queryCareFocuses.length > 0) {
+    for (const provider of providers.slice(0, 2000)) {
+      if (providerHasCareFocus(provider, queryCareFocuses)) {
+        suggestions.add(provider.name)
+      }
+      if (suggestions.size >= 5) break
+    }
+  }
 
   return Array.from(suggestions).slice(0, 5)
 }

@@ -1,7 +1,7 @@
-import fs from 'fs'
-import path from 'path'
+import { hasVerifiedSelfReferral } from '../../lib/self-referral'
+import { loadProviderDataset } from '../../lib/provider-data'
 
-export default function handler(req, res) {
+export default async function handler(req, res) {
   const { method, query } = req
   
   if (method !== 'GET') {
@@ -11,14 +11,7 @@ export default function handler(req, res) {
   try {
     // Determine which dataset to use
     const useSample = query.sample === 'true'
-    const filename = useSample ? 'providers-sweden-sample.json' : 'providers-sweden.json'
-    const filePath = path.join(process.cwd(), 'public/data', filename)
-    
-    if (!fs.existsSync(filePath)) {
-      return res.status(404).json({ error: 'Provider data not found' })
-    }
-
-    const data = JSON.parse(fs.readFileSync(filePath, 'utf8'))
+    const data = await loadProviderDataset(req, { useSample })
     let providers = data.providers
 
     // Apply filters
@@ -48,7 +41,7 @@ export default function handler(req, res) {
 
     // Filter by self-referral capability
     if (self_referral === 'true') {
-      providers = providers.filter(p => p.services.self_referral === true)
+      providers = providers.filter(p => hasVerifiedSelfReferral(p))
     }
 
     // Geographic filtering (if lat/lng provided)

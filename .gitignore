@@ -12,6 +12,7 @@
 
 # Production
 /build
+/dist
 
 # Misc
 .DS_Store
@@ -54,6 +55,14 @@ pids
 
 # Optional eslint cache
 .eslintcache
+
+# Local agent tooling
+.agent/
+.agents/
+.claude/
+.wrangler/
+skills/
+skills-lock.json
 
 # Yarn Integrity file
 .yarn-integrity

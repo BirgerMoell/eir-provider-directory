@@ -1,0 +1,17 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "eir-provider-directory",
+  "compatibility_date": "2026-03-03",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "main": "./worker/manual.ts",
+  "assets": {
+    "directory": "./dist/deploy-assets",
+    "not_found_handling": "none",
+    "binding": "ASSETS"
+  },
+  "images": {
+    "binding": "IMAGES"
+  }
+}
