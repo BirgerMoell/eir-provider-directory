@@ -11,9 +11,14 @@ export default function ProviderMap({ providers, onProviderSelect, selectedProvi
   const mapContainerRef = useRef(null)
   const mapRef = useRef(null)
   const mapLibRef = useRef(null)
+  const onProviderSelectRef = useRef(onProviderSelect)
   const userMarkerRef = useRef(null)
   const providerIndexRef = useRef(new Map())
   const [mapReady, setMapReady] = useState(false)
+
+  useEffect(() => {
+    onProviderSelectRef.current = onProviderSelect
+  }, [onProviderSelect])
 
   const geojson = useMemo(() => {
     const features = []
@@ -156,7 +161,7 @@ export default function ProviderMap({ providers, onProviderSelect, selectedProvi
                 if (leafErr || !leaves?.length) return
                 const providerId = leaves[0].properties?.id
                 const provider = providerIndexRef.current.get(providerId)
-                if (provider) onProviderSelect(provider)
+                if (provider) onProviderSelectRef.current?.(provider)
               })
               return
             }
@@ -172,7 +177,7 @@ export default function ProviderMap({ providers, onProviderSelect, selectedProvi
           if (!feature) return
           const providerId = feature.properties?.id
           const provider = providerIndexRef.current.get(providerId)
-          if (provider) onProviderSelect(provider)
+          if (provider) onProviderSelectRef.current?.(provider)
         })
 
         map.on('mouseenter', 'clusters', () => {
@@ -208,7 +213,7 @@ export default function ProviderMap({ providers, onProviderSelect, selectedProvi
         mapRef.current = null
       }
     }
-  }, [onProviderSelect])
+  }, [])
 
   useEffect(() => {
     const map = mapRef.current
@@ -227,7 +232,6 @@ export default function ProviderMap({ providers, onProviderSelect, selectedProvi
     if (selectedProvider?.location?.coordinates?.lat && selectedProvider?.location?.coordinates?.lng) {
       map.easeTo({
         center: [selectedProvider.location.coordinates.lng, selectedProvider.location.coordinates.lat],
-        zoom: Math.max(map.getZoom(), 10),
         duration: 600
       })
     }
