@@ -207,6 +207,15 @@ export default function Home() {
     setSelectedProvider(provider)
   }
 
+  const applySelfReferralSpecialistsShortcut = () => {
+    applyShortcut({
+      query: '',
+      type: 'specialist',
+      services: { ...serviceFilters, selfReferral: true },
+      mode: 'list'
+    })
+  }
+
   const applyShortcut = ({
     query = '',
     type = 'all',
@@ -226,6 +235,24 @@ export default function Home() {
     }
     setViewMode(mode)
   }
+
+  useEffect(() => {
+    const parseBooleanFlag = value =>
+      ['1', 'true', 'yes', 'on'].includes(String(value || '').toLowerCase())
+
+    const search = new URLSearchParams(window.location.search)
+    const shortcut = (search.get('shortcut') || '').toLowerCase()
+
+    const useSelfReferralShortcut =
+      parseBooleanFlag(search.get('self_referral_specialists')) ||
+      parseBooleanFlag(search.get('self_referral_verified')) ||
+      shortcut === 'self-referral-specialists' ||
+      shortcut === 'self_referral_specialists'
+
+    if (useSelfReferralShortcut) {
+      applySelfReferralSpecialistsShortcut()
+    }
+  }, [])
 
   const handleUseCurrentLocation = () => {
     if (userLocation) {
@@ -504,14 +531,7 @@ export default function Home() {
           <button
             type="button"
             className="shortcut-btn"
-            onClick={() =>
-              applyShortcut({
-                query: '',
-                type: 'specialist',
-                services: { ...serviceFilters, selfReferral: true },
-                mode: 'list'
-              })
-            }
+            onClick={applySelfReferralSpecialistsShortcut}
           >
             <strong>Self-referral specialists</strong>
             <span>Find clinics where you can contact directly.</span>
