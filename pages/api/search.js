@@ -1,6 +1,7 @@
 import { hasVerifiedSelfReferral } from '../../lib/self-referral'
 import { findCareFocusesInText, providerHasCareFocus } from '../../lib/care-focus'
 import { loadProviderDataset } from '../../lib/provider-data'
+import { hasProviderDatabase, searchProvidersInDatabase } from '../../lib/provider-db'
 
 export default async function handler(req, res) {
   const { method, query } = req
@@ -15,11 +16,33 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Search query must be at least 2 characters' })
   }
 
+  const searchTerm = q.toLowerCase().trim()
+
   try {
+    if (hasProviderDatabase()) {
+      try {
+        const dbSearch = await searchProvidersInDatabase(searchTerm, parseInt(limit))
+        if (dbSearch) {
+          return res.status(200).json({
+            query: searchTerm,
+            total: dbSearch.results.length,
+            results: dbSearch.results,
+            suggestions: dbSearch.suggestions,
+            metadata: {
+              search_time: new Date().toISOString(),
+              limit: parseInt(limit),
+              source: 'd1'
+            }
+          })
+        }
+      } catch (dbError) {
+        console.error('D1 search query failed, falling back to dataset:', dbError)
+      }
+    }
+
     const data = await loadProviderDataset(req, { useSample: false })
     let providers = data.providers
 
-    const searchTerm = q.toLowerCase().trim()
     const queryCareFocuses = findCareFocusesInText(searchTerm)
     
     // Search across multiple fields with scoring

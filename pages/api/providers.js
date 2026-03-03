@@ -1,5 +1,6 @@
 import { hasVerifiedSelfReferral } from '../../lib/self-referral'
 import { loadProviderDataset } from '../../lib/provider-data'
+import { getProvidersFromDatabase, hasProviderDatabase } from '../../lib/provider-db'
 
 export default async function handler(req, res) {
   const { method, query } = req
@@ -9,6 +10,33 @@ export default async function handler(req, res) {
   }
 
   try {
+    if (hasProviderDatabase()) {
+      try {
+        const dbResult = await getProvidersFromDatabase(query)
+        if (dbResult) {
+          return res.status(200).json({
+            metadata: {
+              total: dbResult.total,
+              returned: dbResult.providers.length,
+              offset: parseInt(query.offset || 0),
+              limit: parseInt(query.limit || 1000),
+              filters_applied: {
+                type: query.type || null,
+                specialty: query.specialty || null,
+                self_referral: query.self_referral === 'true' || null,
+                location: query.location || null,
+                geographic: !!(query.lat && query.lng)
+              },
+              source: 'd1'
+            },
+            providers: dbResult.providers
+          })
+        }
+      } catch (dbError) {
+        console.error('D1 providers query failed, falling back to dataset:', dbError)
+      }
+    }
+
     // Determine which dataset to use
     const useSample = query.sample === 'true'
     const data = await loadProviderDataset(req, { useSample })

@@ -3,6 +3,7 @@ import { handleApiRoute, renderPage } from "../dist/server/entry.js";
 interface Env {
   ASSETS: Fetcher;
   PROVIDER_DATA_BUCKET?: R2Bucket;
+  PROVIDER_DB?: D1Database;
 }
 
 export default {
@@ -21,6 +22,16 @@ export default {
       };
     } else {
       globalThis.__EIR_R2_GET_JSON__ = undefined;
+    }
+
+    if (env.PROVIDER_DB) {
+      globalThis.__EIR_D1_QUERY__ = async (sql: string, params: unknown[] = []) => {
+        const statement = env.PROVIDER_DB!.prepare(sql).bind(...params)
+        const result = await statement.all()
+        return Array.isArray(result.results) ? result.results : []
+      }
+    } else {
+      globalThis.__EIR_D1_QUERY__ = undefined
     }
 
     if (url.pathname.startsWith("/api/") || url.pathname === "/api") {

@@ -292,6 +292,40 @@ Current database coverage:
 - **Maternity**: 41 (0.2%)
 - **Emergency**: 14 (0.1%)
 
+## ☁️ Cloudflare Data Stack
+
+The production deployment uses:
+
+- **Workers Assets** for frontend static files
+- **R2 (`eir-provider-data`)** for full JSON snapshots (including `providers-sweden-verified.json`)
+- **D1 (`eir-provider-db`)** as the primary query backend for `/api/providers` and `/api/search`
+
+### D1 Commands
+
+```bash
+# Create database (one-time)
+npm run d1:create
+
+# Apply schema migration
+npm run d1:migrate
+
+# Import verified dataset from public/data/providers-sweden-verified.json
+npm run d1:import:verified
+
+# Run migration + import together
+npm run d1:bootstrap
+```
+
+### R2 Commands
+
+```bash
+# Create bucket (one-time)
+npm run r2:create-bucket
+
+# Upload all provider JSON snapshots to remote R2
+npm run r2:upload:all
+```
+
 ## 🌟 Future Enhancements
 
 ### **Planned Features**

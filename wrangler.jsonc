@@ -19,5 +19,12 @@
       "binding": "PROVIDER_DATA_BUCKET",
       "bucket_name": "eir-provider-data"
     }
+  ],
+  "d1_databases": [
+    {
+      "binding": "PROVIDER_DB",
+      "database_name": "eir-provider-db",
+      "database_id": "6e487a09-1d30-4d55-a9b1-d9d0b59d002a"
+    }
   ]
 }
